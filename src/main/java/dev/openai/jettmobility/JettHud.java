@@ -31,6 +31,13 @@ public final class JettHud implements HudElement {
         int x = mc.getWindow().getGuiScaledWidth() - W - 6;
         int y = mc.getWindow().getGuiScaledHeight() / 2 - total / 2;
 
+        int knives = JettClientState.knives();
+        if (knives > 0) {
+            Component kc = Component.translatable("hud.jettmobility.knives", knives, JettTuning.KNIVES_MAX);
+            int cx = mc.getWindow().getGuiScaledWidth() / 2;
+            graphics.drawCenteredString(mc.font, kc, cx, mc.getWindow().getGuiScaledHeight() - 62, 0xFF7FE0FF);
+        }
+
         for (Ability ability : Ability.VALUES) {
             boolean unlocked = JettClientState.isUnlocked(ability);
             int remaining = unlocked ? JettClientState.remainingTicks(ability) : 0;

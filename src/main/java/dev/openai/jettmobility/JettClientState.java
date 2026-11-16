@@ -7,11 +7,15 @@ public final class JettClientState {
     private static int mask = 0;
     private static final long[] COOLDOWN_END = new long[Ability.VALUES.length];
     private static long clientTicks = 0;
+    private static int knives = 0;
+
+    public static int knives() { return knives; }
 
     public static void tick() { clientTicks++; }
 
     public static void apply(JettNetworking.StateS2C state) {
         mask = state.mask();
+        knives = state.knives();
         for (int i = 0; i < COOLDOWN_END.length; i++) {
             COOLDOWN_END[i] = clientTicks + state.cooldown(i);
         }
@@ -19,6 +23,7 @@ public final class JettClientState {
 
     public static void reset() {
         mask = 0;
+        knives = 0;
         java.util.Arrays.fill(COOLDOWN_END, 0);
     }
 

@@ -32,6 +32,8 @@ public final class JettFx {
             case JettNetworking.FX_DASH -> ACTIVE.add(new DashFx(fx.entityId(), fx.x(), fx.z(), fx.duration()));
             case JettNetworking.FX_SPHERE -> ACTIVE.add(new SphereFx(new Vec3(fx.x(), fx.y(), fx.z()), fx.duration()));
             case JettNetworking.FX_STORM -> ACTIVE.add(new StormFx(fx.entityId(), fx.duration()));
+            case JettNetworking.FX_CLOUD_THROW -> ACTIVE.add(new CloudThrowFx(fx.entityId(), new Vec3(fx.x(), fx.y(), fx.z()), fx.duration()));
+            case JettNetworking.FX_KNIFE -> ACTIVE.add(new KnifeTrailFx(fx.entityId(), new Vec3(fx.x(), fx.y(), fx.z()), fx.duration()));
             default -> { }
         }
     }
@@ -110,31 +112,31 @@ public final class JettFx {
 
             // explosão inicial: a bola "abre" a partir do ponto de impacto
             if (age < 4) {
-                for (int i = 0; i < 18; i++) {
+                for (int i = 0; i < 12; i++) {
                     double[] d = randomDir();
                     smoke(mc, c.x + d[0] * r * 0.35, c.y + d[1] * r * 0.35, c.z + d[2] * r * 0.35,
-                            d[0] * 0.3, d[1] * 0.3, d[2] * 0.3, (float) (7 + 3 * rnd()), 12 + (int) (6 * rnd()));
+                            d[0] * 0.2, d[1] * 0.2, d[2] * 0.2, (float) (4.5 + 2 * rnd()), 12 + (int) (6 * rnd()));
                 }
             }
 
             // casca: partículas na superfície com velocidade tangencial (giro em torno do eixo Y)
-            int shell = (int) Math.ceil(26 * fade);
+            int shell = (int) Math.ceil(16 * fade);
             for (int i = 0; i < shell; i++) {
                 double[] d = randomDir();
                 double rr = r * (0.97 + 0.06 * rnd());
-                double swirl = 0.065;
+                double swirl = 0.05;
                 smoke(mc, c.x + d[0] * rr, c.y + d[1] * rr, c.z + d[2] * rr,
                         -d[2] * swirl, 0.008 * (rnd() - 0.5), d[0] * swirl,
-                        (float) (6.5 + 3 * rnd()), 16 + (int) (8 * rnd()));
+                        (float) (4.2 + 2 * rnd()), 16 + (int) (8 * rnd()));
             }
             // miolo: volume preenchido, giro mais lento
-            int core = (int) Math.ceil(9 * fade);
+            int core = (int) Math.ceil(5 * fade);
             for (int i = 0; i < core; i++) {
                 double[] d = randomDir();
                 double rr = r * 0.8 * Math.cbrt(rnd());
                 smoke(mc, c.x + d[0] * rr, c.y + d[1] * rr, c.z + d[2] * rr,
                         -d[2] * 0.025, 0.0, d[0] * 0.025,
-                        (float) (9 + 4 * rnd()), 20 + (int) (10 * rnd()));
+                        (float) (5.5 + 2.5 * rnd()), 20 + (int) (10 * rnd()));
             }
             // poeira de vento no chão, empurrada para fora
             if (age % 2 == 0 && fade > 0.2) {
@@ -143,7 +145,7 @@ public final class JettFx {
                     double a = rnd() * Math.PI * 2;
                     double rad = JettTuning.SPHERE_RADIUS * (0.5 + 0.5 * rnd()) * grow;
                     smoke(mc, c.x + Math.cos(a) * rad, groundY, c.z + Math.sin(a) * rad,
-                            Math.cos(a) * 0.05, 0.01, Math.sin(a) * 0.05, 4.5f, 14);
+                            Math.cos(a) * 0.05, 0.01, Math.sin(a) * 0.05, 3.2f, 14);
                 }
             }
             // faíscas de vento orbitando a superfície
@@ -154,7 +156,7 @@ public final class JettFx {
                     double h = Math.sin(age * 0.07 + k * 2) * r * 0.7;
                     double ring = Math.sqrt(Math.max(r * r - h * h, 0));
                     wisp(mc, c.x + Math.cos(ang) * ring, c.y + h, c.z + Math.sin(ang) * ring,
-                            -Math.sin(ang) * 0.12, 0, Math.cos(ang) * 0.12, 3.0f, 12);
+                            -Math.sin(ang) * 0.1, 0, Math.cos(ang) * 0.1, 2.4f, 12);
                 }
             }
             age++;
@@ -310,6 +312,92 @@ public final class JettFx {
                     smoke(mc, ex + Math.cos(a) * 0.8, ey + 0.1, ez + Math.sin(a) * 0.8,
                             Math.cos(a) * 0.16, 0.01, Math.sin(a) * 0.16, 4.0f, 12);
                 }
+            }
+            age++;
+            return true;
+        }
+    }
+
+    // ------------------------------------------------------------------ Cloudburst: projétil com rastro até pousar
+
+    private static final class CloudThrowFx implements ClientEffect {
+        private final int entityId;
+        private final Vec3 end;
+        private final int flight;
+        private Vec3 start = null;
+        private Vec3 last = null;
+        private int age = 0;
+
+        CloudThrowFx(int entityId, Vec3 end, int flight) {
+            this.entityId = entityId;
+            this.end = end;
+            this.flight = Math.max(1, flight);
+        }
+
+        private Vec3 at(double t) {
+            Vec3 p = start.lerp(end, t);
+            return p.add(0, Math.sin(t * Math.PI) * 1.2, 0); // arco leve
+        }
+
+        @Override
+        public boolean tick(Minecraft mc) {
+            if (start == null) {
+                Entity e = find(mc, entityId);
+                start = e != null ? new Vec3(e.getX(), e.getEyeY() - 0.2, e.getZ()) : end.add(0, 2, 0);
+                last = start;
+            }
+            if (age >= flight) {
+                smoke(mc, end.x, end.y + 0.3, end.z, 0, 0.02, 0, 3.0f, 10); // marca do pouso
+                return false;
+            }
+            double t1 = (age + 1.0) / flight;
+            Vec3 cur = at(t1);
+            for (int sub = 1; sub <= 3; sub++) {
+                Vec3 p = last.lerp(cur, sub / 3.0);
+                smoke(mc, p.x + (rnd() - 0.5) * 0.1, p.y + (rnd() - 0.5) * 0.1, p.z + (rnd() - 0.5) * 0.1,
+                        0, 0.003, 0, (float) (1.6 + 0.8 * rnd()), 14 + (int) (8 * rnd())); // rastro que vai sumindo
+            }
+            wisp(mc, cur.x, cur.y, cur.z, 0, 0, 0, 2.0f, 5); // cabeça do projétil
+            last = cur;
+            age++;
+            return true;
+        }
+    }
+
+    // ------------------------------------------------------------------ Faca arremessada: rastro de vento até o impacto
+
+    private static final class KnifeTrailFx implements ClientEffect {
+        private final int entityId;
+        private final Vec3 end;
+        private final int ticks;
+        private Vec3 start = null;
+        private int age = 0;
+
+        KnifeTrailFx(int entityId, Vec3 end, int ticks) {
+            this.entityId = entityId;
+            this.end = end;
+            this.ticks = Math.max(1, ticks);
+        }
+
+        @Override
+        public boolean tick(Minecraft mc) {
+            if (start == null) {
+                Entity e = find(mc, entityId);
+                start = e != null ? new Vec3(e.getX(), e.getEyeY() - 0.15, e.getZ()) : end;
+            }
+            if (age >= ticks) {
+                for (int i = 0; i < 5; i++) {
+                    double[] d = randomDir();
+                    wisp(mc, end.x, end.y, end.z, d[0] * 0.1, d[1] * 0.1, d[2] * 0.1, 2.0f, 8); // faísca de impacto
+                }
+                return false;
+            }
+            Vec3 a = start.lerp(end, (double) age / ticks);
+            Vec3 b = start.lerp(end, (age + 1.0) / ticks);
+            int steps = Math.max(2, (int) (a.distanceTo(b) * 2));
+            for (int i = 0; i < steps; i++) {
+                Vec3 p = a.lerp(b, (double) i / steps);
+                wisp(mc, p.x, p.y, p.z, 0, 0, 0, 1.4f, 6);
             }
             age++;
             return true;

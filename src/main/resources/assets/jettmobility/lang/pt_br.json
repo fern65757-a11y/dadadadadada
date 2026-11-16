@@ -16,5 +16,6 @@
   "message.jettmobility.already_unlocked": "Você já desbloqueou %s",
   "hud.jettmobility.ready": "PRONTO",
   "hud.jettmobility.locked": "BLOQ.",
+  "hud.jettmobility.knives": "Facas: %s/%s",
   "item.jettmobility.wind_knife": "Faca de Vento"
 }

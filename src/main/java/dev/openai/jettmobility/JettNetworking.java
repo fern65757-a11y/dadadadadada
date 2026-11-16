@@ -15,6 +15,8 @@ public final class JettNetworking {
     public static final int FX_DASH = 1;
     public static final int FX_SPHERE = 2;
     public static final int FX_STORM = 3;
+    public static final int FX_KNIFE = 4;
+    public static final int FX_CLOUD_THROW = 5;
 
     /** Cliente -> servidor: "apertei a tecla da habilidade N". (dirX, dirZ) = direção de movimento desejada (Tailwind). */
     public record AbilityC2S(int ability, float dirX, float dirZ) implements CustomPacketPayload {
@@ -30,8 +32,19 @@ public final class JettNetworking {
         public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    /** Servidor -> cliente dono: máscara de desbloqueio + cooldown restante (ticks) de cada habilidade, para o HUD. */
-    public record StateS2C(int mask, int cd0, int cd1, int cd2, int cd3) implements CustomPacketPayload {
+    /** Cliente -> servidor: "cliquei para arremessar uma faca" (só vale com o modo Tempestade de Facas ativo). */
+    public record KnifeThrowC2S() implements CustomPacketPayload {
+        public static final Type<KnifeThrowC2S> TYPE =
+                new Type<>(Identifier.fromNamespaceAndPath(JettMobility.MOD_ID, "throw"));
+        public static final StreamCodec<RegistryFriendlyByteBuf, KnifeThrowC2S> CODEC =
+                StreamCodec.unit(new KnifeThrowC2S());
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    /** Servidor -> cliente dono: desbloqueios, cooldowns (ticks) e facas restantes, para o HUD e para o clique. */
+    public record StateS2C(int mask, int cd0, int cd1, int cd2, int cd3, int knives) implements CustomPacketPayload {
         public static final Type<StateS2C> TYPE =
                 new Type<>(Identifier.fromNamespaceAndPath(JettMobility.MOD_ID, "state"));
         public static final StreamCodec<RegistryFriendlyByteBuf, StateS2C> CODEC = StreamCodec.composite(
@@ -40,6 +53,7 @@ public final class JettNetworking {
                 ByteBufCodecs.VAR_INT, StateS2C::cd1,
                 ByteBufCodecs.VAR_INT, StateS2C::cd2,
                 ByteBufCodecs.VAR_INT, StateS2C::cd3,
+                ByteBufCodecs.VAR_INT, StateS2C::knives,
                 StateS2C::new);
 
         public int cooldown(int index) {
@@ -52,7 +66,7 @@ public final class JettNetworking {
 
     /**
      * Servidor -> todos os jogadores próximos: "toque o efeito visual X".
-     * Para efeitos que acompanham alguém, entityId é o jogador e (x,y,z) carrega a direção; para a esfera, é a posição.
+     * Para efeitos que acompanham alguém, entityId é o jogador e (x,y,z) carrega a direção ou o ponto final.
      */
     public record FxS2C(int kind, int entityId, double x, double y, double z, int duration) implements CustomPacketPayload {
         public static final Type<FxS2C> TYPE =
@@ -72,9 +86,12 @@ public final class JettNetworking {
 
     public static void register() {
         PayloadTypeRegistry.playC2S().register(AbilityC2S.TYPE, AbilityC2S.CODEC);
+        PayloadTypeRegistry.playC2S().register(KnifeThrowC2S.TYPE, KnifeThrowC2S.CODEC);
         PayloadTypeRegistry.playS2C().register(StateS2C.TYPE, StateS2C.CODEC);
         PayloadTypeRegistry.playS2C().register(FxS2C.TYPE, FxS2C.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(AbilityC2S.TYPE,
                 (payload, context) -> JettAbilities.tryActivate(context.player(), payload.ability(), payload.dirX(), payload.dirZ()));
+        ServerPlayNetworking.registerGlobalReceiver(KnifeThrowC2S.TYPE,
+                (payload, context) -> JettAbilities.tryThrowKnife(context.player()));
     }
 }

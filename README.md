@@ -35,3 +35,8 @@ Dependências: Minecraft 1.21.11, Fabric Loader 0.18.1, Loom 1.14, Fabric API 0.
 ## Estado de verificação
 - Verificado: v1.1.0 compilou no GitHub Actions. Na v1.2.0, o JSON dos recursos é válido, a sintaxe Java confere, e a geometria dos modelos foi conferida em uma renderização própria (não é captura do jogo).
 - **Não verificado**: a v1.2.0 ainda não foi compilada nem executada no Minecraft. Aparência real dos efeitos, transparência da esfera, posição da faca na mão e comportamento em multiplayer precisam ser testados no jogo.
+
+## v1.3.0
+- Cloudburst (E): fumaça menor (raio 2) que é arremessada com rastro e só abre ao pousar.
+- Tempestade de Facas (X): 5 facas; clique esquerdo arremessa. Cabeça = morte instantânea; corpo = 3 acertos; abate devolve as 5 facas. Dano mágico (ignora armadura), respeita PvP/criativo.
+- Não testado dentro do jogo: validado apenas por compilação no GitHub Actions.

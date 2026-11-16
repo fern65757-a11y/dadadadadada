@@ -57,6 +57,12 @@ public class JettMobilityClient implements ClientModInitializer {
             if (!client.isPaused()) JettClientState.tick();
             applyDashPrediction(client);
             if (client.screen != null) return;
+            if (JettClientState.knives() > 0) { // modo Tempestade de Facas: clique esquerdo arremessa a faca
+                while (client.options.keyAttack.consumeClick()) {
+                    ClientPlayNetworking.send(new JettNetworking.KnifeThrowC2S());
+                    client.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                }
+            }
             for (Ability ability : Ability.VALUES) {
                 KeyMapping key = KEYS[ability.ordinal()];
                 while (key.consumeClick()) {

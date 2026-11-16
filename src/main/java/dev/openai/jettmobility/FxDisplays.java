@@ -67,6 +67,15 @@ public final class FxDisplays {
 
     /** Cria um item_display com o modelo indicado (ex.: "jettmobility:fx/smoke_core"). Devolve o UUID. */
     public static UUID spawn(MinecraftServer server, ServerLevel level, Vec3 pos, String itemModel, double scale) {
+        return spawn(server, level, pos, itemModel, scale, 0, 0, 0, 1, 3);
+    }
+
+    /**
+     * Versão completa: rotação inicial (quaternion x,y,z,w) e duração da interpolação de movimento (ticks, 0..59):
+     * um único tp depois do summon faz o cliente deslizar a entidade suavemente até o destino.
+     */
+    public static UUID spawn(MinecraftServer server, ServerLevel level, Vec3 pos, String itemModel, double scale,
+                             double qx, double qy, double qz, double qw, int teleportTicks) {
         UUID id = UUID.randomUUID();
         LIVE.add(id); // registrar ANTES: o evento de carga não pode tratar esta entidade como "órfã"
         long msb = id.getMostSignificantBits();
@@ -75,10 +84,12 @@ public final class FxDisplays {
         String command = "summon minecraft:item_display " + f(pos.x) + " " + f(pos.y) + " " + f(pos.z)
                 + " {UUID:[I;" + (int) (msb >> 32) + "," + (int) msb + "," + (int) (lsb >> 32) + "," + (int) lsb + "]"
                 + ",Tags:[\"" + TAG + "\"]"
-                + ",billboard:\"fixed\",view_range:2.0f,teleport_duration:3,interpolation_duration:4,start_interpolation:-1"
+                + ",billboard:\"fixed\",view_range:2.0f,teleport_duration:" + Math.max(0, Math.min(59, teleportTicks))
+                + ",interpolation_duration:4,start_interpolation:-1"
                 + ",item_display:\"none\",brightness:{sky:15,block:15}"
                 + ",item:{id:\"minecraft:stick\",count:1,components:{\"minecraft:item_model\":\"" + itemModel + "\"}}"
-                + ",transformation:{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f],scale:["
+                + ",transformation:{left_rotation:[" + ff(qx) + "," + ff(qy) + "," + ff(qz) + "," + ff(qw)
+                + "],right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f],scale:["
                 + s + "," + s + "," + s + "]}}";
         if (!run(server, level, command)) {
             LIVE.remove(id);

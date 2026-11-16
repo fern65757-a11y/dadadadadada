@@ -16,5 +16,6 @@
   "message.jettmobility.already_unlocked": "You already unlocked %s",
   "hud.jettmobility.ready": "READY",
   "hud.jettmobility.locked": "LOCKED",
+  "hud.jettmobility.knives": "Knives: %s/%s",
   "item.jettmobility.wind_knife": "Wind Knife"
 }
